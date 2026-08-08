@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: sans-serif;
+            background: #111;
+            color: white;
+            padding: 24px 16px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 24px;
+            text-align: center;
+            color: #eee;
+        }
+
+        .section {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section h2 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            margin: 8px 0;
+            font-size: 22px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-row .btn {
+            flex: 1;
+        }
+
+        .btn-start-ant    { background: #2e7d32; color: white; }
+        .btn-start-beetle { background: #2e7d32; color: white; }
+        .btn-pause        { background: #f9a825; color: black; }
+        .btn-reset        { background: #1565c0; color: white; }
+        .btn-tapout       { background: #b71c1c; color: white; }
+        .btn-set          { background: #37474f; color: white; }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            background: #2a2a2a;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        input::placeholder { color: #666; }
+
+        .hint {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Arena Controller</h1>
+
+    <!-- Team setup -->
+    <div class="section">
+        <h2>Teams</h2>
+        <input type="text" id="team1" name="team1" placeholder="Team 1 Name">
+        <input type="text" id="team2" name="team2" placeholder="Team 2 Name">
+        <button class="btn btn-set"
+                hx-get="/setteams"
+                hx-include="#team1,#team2"
+                hx-swap="none">Set Teams</button>
+    </div>
+
+    <!-- Match start -->
+    <div class="section">
+        <h2>Start Match</h2>
+        <div class="btn-row">
+            <button class="btn btn-start-ant"
+                    hx-get="/command/fa"
+                    hx-swap="none"> Ant (2 min)</button>
+            <button class="btn btn-start-beetle"
+                    hx-get="/command/fb"
+                    hx-swap="none"> Beetle (3 min)</button>
+        </div>
+    </div>
+
+    <!-- Match controls -->
+    <div class="section">
+        <h2>Match Controls</h2>
+        <div class="btn-row">
+            <button class="btn btn-pause"  hx-get="/command/u" hx-swap="none">Pause</button>
+            <button class="btn btn-tapout" hx-get="/command/t" hx-swap="none">End Match</button>
+        </div>
+        <button class="btn btn-reset" hx-get="/command/r" hx-swap="none">Reset</button>
+    </div>
+
+    <!-- Time adjustment -->
+    <div class="section">
+        <h2>Adjust Time</h2>
+        <p class="hint">Pause the match before adjusting time.</p>
+        <input type="number" id="time" placeholder="Seconds">
+        <input type="hidden" id="time_send" name="time">
+        <div class="btn-row">
+            <button class="btn btn-set"
+                    hx-get="/command/c"
+                    hx-include="#time_send"
+                    hx-on:click="document.getElementById('time_send').value = document.getElementById('time').value"
+                    hx-on:htmx:after-request="document.getElementById('time').value = ''; document.getElementById('time_send').value = ''"
+                    hx-swap="none">+ Add</button>
+            <button class="btn btn-tapout"
+                    hx-get="/command/c"
+                    hx-include="#time_send"
+                    hx-on:click="document.getElementById('time_send').value = document.getElementById('time').value * -1"
+                    hx-on:htmx:after-request="document.getElementById('time').value = ''; document.getElementById('time_send').value = ''"
+                    hx-swap="none">− Subtract</button>
+        </div>
+    </div>
+</body>
+</html>

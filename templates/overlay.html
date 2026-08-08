@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: black;
+            color: white;
+            font-family: sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #matchup {
+            display: none;
+            flex-direction: row;
+            align-items: center;
+            gap: 40px;
+        }
+
+        #team1-name {
+            font-size: 48px;
+            color: red;
+        }
+
+        #team2-name {
+            font-size: 48px;
+            color: blue;
+        }
+
+        #timer {
+            font-size: 48px;
+            color: white;
+            line-height: 1;
+        }
+
+        #timer.paused {
+            color: gold;
+        }
+
+        #state {
+            font-size: 24px;
+            color: #666;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="matchup">
+        <span id="team1-name">Team 1</span>
+        <span id="timer">3:00</span>
+        <span id="team2-name">Team 2</span>
+    </div>
+    <div id="state">WAITING FOR TEAMS</div>
+
+    <script>
+        const stateLabels = {
+            0: "WAITING FOR TEAMS",
+            1: "MATCH IN PROGRESS",
+            2: "PAUSED",
+            3: "MATCH COMPLETE"
+        }
+
+        setInterval(() => {
+            fetch('/status')
+                .then(r => r.json())
+                .then(d => {
+                    const matchup = document.getElementById('matchup')
+                    const timer   = document.getElementById('timer')
+                    const state   = document.getElementById('state')
+
+                    document.getElementById('team1-name').innerText = d.team1
+                    document.getElementById('team2-name').innerText = d.team2
+                    timer.innerText = d.time_str
+                    state.innerText = stateLabels[d.state] || 'UNKNOWN'
+
+                    if (d.state === 1 || d.state === 2) {
+                        matchup.style.display = 'flex'
+                        timer.className = d.state === 2 ? 'paused' : ''
+                    } else {
+                        matchup.style.display = 'none'
+                    }
+                })
+        }, 500)
+    </script>
+</body>
+</html>

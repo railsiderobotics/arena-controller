@@ -1,0 +1,13 @@
+# Arena Controller for Raspberry Pi 4 - Dependencies
+
+# Install with: pip install -r REQUIREMENTS_RPI.txt
+# Note: pygame is installed separately by setup_arena_controller.sh
+
+# GPIO control for Raspberry Pi (0.7.1+ required for Python 3.13 compatibility)
+RPi.GPIO>=0.7.1
+
+# NeoPixel LED strip control
+adafruit-circuitpython-neopixel==6.3.10
+
+# For serial communication
+pyserial==3.5
