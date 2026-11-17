@@ -5,88 +5,183 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
         body {
             background: black;
             color: white;
             font-family: sans-serif;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
         }
 
         #matchup {
-            display: none;
-            flex-direction: row;
+            position: absolute;
+            top: 15%;
+            left: 0;
+            width: 100%;
+            padding: 0 40px;
+            transform: translateY(-50%);
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             align-items: center;
-            gap: 40px;
+            column-gap: 40px;
         }
 
-        #team1-name {
-            font-size: 48px;
-            color: red;
-        }
-
-        #team2-name {
-            font-size: 48px;
-            color: blue;
-        }
-
-        #timer {
-            font-size: 48px;
+        #team1-name, #team2-name {
+            font-size: 96px;
             color: white;
+            text-align: center;
+            transition: color 0.3s;
+            overflow-wrap: anywhere;
+        }
+        #team1-name.ready { color: red; }
+        #team2-name.ready { color: blue; }
+
+        #vs {
+            font-size: 96px;
+            color: #aaa;
             line-height: 1;
+            text-align: center;
+            visibility: hidden;
         }
 
-        #timer.paused {
-            color: gold;
+        #weight {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            bottom: 8%;
+            font-size: 80px;
+            letter-spacing: 4px;
+            color: #aaa;
+            text-align: center;
         }
 
         #state {
-            font-size: 24px;
-            color: #666;
-            margin-top: 16px;
+            position: absolute;
+            left: 0%;
+            width: 100%;
+            top: 90%;
+            font-size: 80px;
+            color: #aaa;
+            text-align: center;
+        }
+
+        #timer {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 700px;
+            color: white;
+            line-height: 1;
+            text-align: center;
+        }
+
+        #timer.c-white   { color: white; }
+        #timer.c-red     { color: red; }
+        #timer.c-green   { color: white; } /* Green suppressed as requested */
+        #timer.c-blue    { color: blue; }
+        #timer.c-yellow  { color: gold; }
+        #timer.c-cyan    { color: cyan; }
+        #timer.c-magenta { color: magenta; }
+        #timer.c-flash   { animation: flash 1s steps(1, end) infinite; }
+
+        @keyframes flash {
+            0%   { color: red; }
+            50%  { color: blue; }
+            100% { color: red; }
         }
     </style>
 </head>
 <body>
+    <div id="weight"></div>
     <div id="matchup">
-        <span id="team1-name">Team 1</span>
-        <span id="timer">3:00</span>
-        <span id="team2-name">Team 2</span>
+        <span id="team1-name"></span>
+        <span id="vs">VS</span>
+        <span id="team2-name"></span>
     </div>
-    <div id="state">WAITING FOR TEAMS</div>
+    <div id="state"></div>
+    <div id="timer" class="c-white">2:00</div>
 
     <script>
         const stateLabels = {
-            0: "WAITING FOR TEAMS",
+            0: "",
             1: "MATCH IN PROGRESS",
             2: "PAUSED",
             3: "MATCH COMPLETE"
+        };
+        const weightLabels = {
+            ant:    "ANTWEIGHT",
+            beetle: "BEETLEWEIGHT"
+        };
+
+        const el = {
+            timer:  document.getElementById('timer'),
+            t1:     document.getElementById('team1-name'),
+            t2:     document.getElementById('team2-name'),
+            vs:     document.getElementById('vs'),
+            weight: document.getElementById('weight'),
+            state:  document.getElementById('state')
+        };
+
+        // Only touch the page when a value actually changed.
+        const setText  = (node, v) => { if (node.textContent !== v) node.textContent = v; };
+        const setClass = (node, v) => { if (node.className !== v) node.className = v; };
+
+        function render(d) {
+            setText(el.t1, d.teams_set ? d.team1 : '');
+            setText(el.t2, d.teams_set ? d.team2 : '');
+            setClass(el.t1, d.red_ready  ? 'ready' : '');
+            setClass(el.t2, d.blue_ready ? 'ready' : '');
+
+            const vis = d.teams_set ? 'visible' : 'hidden';
+            if (el.vs.style.visibility !== vis) el.vs.style.visibility = vis;
+
+            setText(el.weight, weightLabels[d.weight] || '');
+            setText(el.state,  stateLabels[d.state] || '');
+
+            if (d.timer_color === 'flash' && d.start_countdown > 0) {
+                setText(el.timer, String(d.start_countdown));
+            } else {
+                setText(el.timer, d.time_str);
+            }
+            setClass(el.timer, 'c-' + (d.timer_color || 'white'));
+        }
+
+        // Live updates pushed by the Pi. If the link drops or goes silent the
+        // page reconnects by itself (the Pi sends a heartbeat every ~2s).
+        let es = null, lastMsg = 0, retryTimer = null;
+
+        function scheduleReconnect() {
+            if (retryTimer) return;
+            retryTimer = setTimeout(() => { retryTimer = null; connect(); }, 1000);
+        }
+
+        function connect() {
+            if (es) es.close();
+            lastMsg = Date.now();
+            es = new EventSource('/events');
+            es.onmessage = (e) => {
+                lastMsg = Date.now();
+                try { render(JSON.parse(e.data)); } catch (err) {}
+            };
+            es.onerror = () => { es.close(); scheduleReconnect(); };
         }
 
         setInterval(() => {
-            fetch('/status')
-                .then(r => r.json())
-                .then(d => {
-                    const matchup = document.getElementById('matchup')
-                    const timer   = document.getElementById('timer')
-                    const state   = document.getElementById('state')
+            if (Date.now() - lastMsg > 5000) {
+                if (es) es.close();
+                scheduleReconnect();
+            }
+        }, 2000);
 
-                    document.getElementById('team1-name').innerText = d.team1
-                    document.getElementById('team2-name').innerText = d.team2
-                    timer.innerText = d.time_str
-                    state.innerText = stateLabels[d.state] || 'UNKNOWN'
-
-                    if (d.state === 1 || d.state === 2) {
-                        matchup.style.display = 'flex'
-                        timer.className = d.state === 2 ? 'paused' : ''
-                    } else {
-                        matchup.style.display = 'none'
-                    }
-                })
-        }, 500)
+        connect();
     </script>
 </body>
 </html>

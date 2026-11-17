@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://unpkg.com/htmx.org"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -10,14 +9,62 @@
             font-family: sans-serif;
             background: #111;
             color: white;
-            padding: 24px 16px;
+            padding: 24px 16px 90px;
         }
 
         h1 {
             font-size: 28px;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
             text-align: center;
             color: #eee;
+        }
+
+        /* Connection indicator */
+        .conn {
+            text-align: center;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            color: #888;
+        }
+        .conn::before {
+            content: "";
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #888;
+            vertical-align: middle;
+        }
+        .conn.ok  { color: #4caf50; }
+        .conn.ok::before  { background: #4caf50; }
+        .conn.bad { color: #ef5350; }
+        .conn.bad::before { background: #ef5350; }
+
+        .timer-card {
+            background: #1e1e1e;
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .timer-display {
+            font-size: 48px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #4caf50;
+            margin-top: 8px;
+        }
+
+        .timer-status-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
         }
 
         .section {
@@ -35,6 +82,9 @@
             margin-bottom: 12px;
         }
 
+        .section.red-team  { border-left: 6px solid #d32f2f; }
+        .section.blue-team { border-left: 6px solid #1976d2; }
+
         .btn {
             display: block;
             width: 100%;
@@ -46,21 +96,22 @@
             border-radius: 8px;
             cursor: pointer;
         }
+        .btn:disabled { opacity: 0.55; cursor: default; }
 
-        .btn-row {
-            display: flex;
-            gap: 8px;
-        }
-        .btn-row .btn {
-            flex: 1;
-        }
+        .btn-row { display: flex; gap: 8px; }
+        .btn-row .btn { flex: 1; }
 
-        .btn-start-ant    { background: #2e7d32; color: white; }
-        .btn-start-beetle { background: #2e7d32; color: white; }
-        .btn-pause        { background: #f9a825; color: black; }
-        .btn-reset        { background: #1565c0; color: white; }
-        .btn-tapout       { background: #b71c1c; color: white; }
-        .btn-set          { background: #37474f; color: white; }
+        .btn-class  { background: #455a64; color: white; }
+        .btn-start  { background: #2e7d32; color: white; }
+        .btn-pause  { background: #f9a825; color: black; }
+        .btn-reset  { background: #1565c0; color: white; }
+        .btn-tapout { background: #b71c1c; color: white; }
+        .btn-set    { background: #37474f; color: white; }
+        .btn-white  { background: #eeeeee; color: black; }
+
+        .btn-g { background: #2e7d32; color: white; }
+        .btn-y { background: #f9a825; color: black; }
+        .btn-r { background: #c62828; color: white; }
 
         input[type="text"],
         input[type="number"] {
@@ -81,65 +132,242 @@
             color: #666;
             margin-bottom: 10px;
         }
+
+        /* Result of the last command: shows whether it actually reached the Pi */
+        #toast {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            background: #2e7d32;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        #toast.show { opacity: 1; }
+        #toast.fail { background: #b71c1c; }
     </style>
 </head>
 <body>
     <h1>Arena Controller</h1>
+    <div class="conn" id="conn">Connecting</div>
+
+    <!-- Live Timer Status Card -->
+    <div class="timer-card">
+        <div class="timer-status-label" id="status-label">Waiting for Teams</div>
+        <div class="timer-display" id="timer-text">02:00</div>
+    </div>
 
     <!-- Team setup -->
     <div class="section">
         <h2>Teams</h2>
-        <input type="text" id="team1" name="team1" placeholder="Team 1 Name">
-        <input type="text" id="team2" name="team2" placeholder="Team 2 Name">
-        <button class="btn btn-set"
-                hx-get="/setteams"
-                hx-include="#team1,#team2"
-                hx-swap="none">Set Teams</button>
+        <input type="text" id="team1" name="team1" placeholder="Red Team Name">
+        <input type="text" id="team2" name="team2" placeholder="Blue Team Name">
+        <button class="btn btn-set" onclick="setTeams(this)">Set Teams</button>
     </div>
 
-    <!-- Match start -->
+    <!-- Weight class -->
     <div class="section">
-        <h2>Start Match</h2>
+        <h2>Weight Class</h2>
+        <p class="hint">Selecting a class only updates the overlay and match length.</p>
         <div class="btn-row">
-            <button class="btn btn-start-ant"
-                    hx-get="/command/fa"
-                    hx-swap="none"> Ant (2 min)</button>
-            <button class="btn btn-start-beetle"
-                    hx-get="/command/fb"
-                    hx-swap="none"> Beetle (3 min)</button>
+            <button class="btn btn-class" onclick="send('/command/ant', 'Ant', this)">Ant (2 min)</button>
+            <button class="btn btn-class" onclick="send('/command/beetle', 'Beetle', this)">Beetle (2 min)</button>
         </div>
     </div>
 
     <!-- Match controls -->
     <div class="section">
         <h2>Match Controls</h2>
+        <button class="btn btn-start" onclick="startMatch(this)">Start / Resume</button>
         <div class="btn-row">
-            <button class="btn btn-pause"  hx-get="/command/u" hx-swap="none">Pause</button>
-            <button class="btn btn-tapout" hx-get="/command/t" hx-swap="none">End Match</button>
+            <button class="btn btn-pause"  onclick="send('/command/u', 'Pause / Resume', this)">Pause / Resume</button>
+            <button class="btn btn-tapout" onclick="send('/command/t', 'End Match', this)">End Match</button>
         </div>
-        <button class="btn btn-reset" hx-get="/command/r" hx-swap="none">Reset</button>
+        <button class="btn btn-reset" onclick="send('/command/r', 'Reset', this)">Reset</button>
+    </div>
+
+    <!-- Red team virtual buttons -->
+    <div class="section red-team">
+        <h2>Red Team Buttons</h2>
+        <div class="btn-row">
+            <button class="btn btn-g" onclick="send('/press/red/green',  'Red Ready',  this)">Ready</button>
+            <button class="btn btn-y" onclick="send('/press/red/yellow', 'Red Pause',  this)">Pause</button>
+            <button class="btn btn-r" onclick="send('/press/red/red',    'Red Tapout', this)">Tapout</button>
+        </div>
+    </div>
+
+    <!-- Blue team virtual buttons -->
+    <div class="section blue-team">
+        <h2>Blue Team Buttons</h2>
+        <div class="btn-row">
+            <button class="btn btn-g" onclick="send('/press/blue/green',  'Blue Ready',  this)">Ready</button>
+            <button class="btn btn-y" onclick="send('/press/blue/yellow', 'Blue Pause',  this)">Pause</button>
+            <button class="btn btn-r" onclick="send('/press/blue/red',    'Blue Tapout', this)">Tapout</button>
+        </div>
     </div>
 
     <!-- Time adjustment -->
     <div class="section">
         <h2>Adjust Time</h2>
-        <p class="hint">Pause the match before adjusting time.</p>
+        <p class="hint">Works while paused or after a match has ended.</p>
         <input type="number" id="time" placeholder="Seconds">
-        <input type="hidden" id="time_send" name="time">
         <div class="btn-row">
-            <button class="btn btn-set"
-                    hx-get="/command/c"
-                    hx-include="#time_send"
-                    hx-on:click="document.getElementById('time_send').value = document.getElementById('time').value"
-                    hx-on:htmx:after-request="document.getElementById('time').value = ''; document.getElementById('time_send').value = ''"
-                    hx-swap="none">+ Add</button>
-            <button class="btn btn-tapout"
-                    hx-get="/command/c"
-                    hx-include="#time_send"
-                    hx-on:click="document.getElementById('time_send').value = document.getElementById('time').value * -1"
-                    hx-on:htmx:after-request="document.getElementById('time').value = ''; document.getElementById('time_send').value = ''"
-                    hx-swap="none">− Subtract</button>
+            <button class="btn btn-set"    onclick="adjustTime(1, this)">+ Add</button>
+            <button class="btn btn-tapout" onclick="adjustTime(-1, this)">&minus; Subtract</button>
         </div>
     </div>
+
+    <!-- White light -->
+    <div class="section">
+        <h2>White Light</h2>
+        <div class="btn-row">
+            <button class="btn btn-white" onclick="send('/white/on',  'White On',  this)">On</button>
+            <button class="btn btn-set"   onclick="send('/white/off', 'White Off', this)">Off</button>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        // ---------- Sending commands ----------
+        const toast = document.getElementById('toast');
+        let toastTimer = null;
+
+        function showToast(msg, ok) {
+            toast.textContent = msg;
+            toast.className = 'show' + (ok ? '' : ' fail');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toast.className = ''; }, ok ? 1500 : 4000);
+        }
+
+        // Sends one command and reports whether it reached the Pi. It never
+        // retries on its own: a retried "Pause / Resume" could flip the match
+        // the wrong way if the first one actually did get through.
+        // The button is locked for a moment so a double-tap can't send twice.
+        async function send(url, label, btn) {
+            if (btn) {
+                if (btn.dataset.busy) return false;
+                btn.dataset.busy = '1';
+                btn.disabled = true;
+            }
+            const ctl = new AbortController();
+            const timeout = setTimeout(() => ctl.abort(), 3000);
+            let ok = false;
+            try {
+                const res = await fetch(url, { signal: ctl.signal, cache: 'no-store' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                showToast('Sent: ' + label, true);
+                ok = true;
+            } catch (err) {
+                showToast('NOT SENT: ' + label + ' (check connection)', false);
+            } finally {
+                clearTimeout(timeout);
+                if (btn) setTimeout(() => { btn.disabled = false; delete btn.dataset.busy; }, 400);
+            }
+            return ok;
+        }
+
+        function setTeams(btn) {
+            const a = encodeURIComponent(document.getElementById('team1').value);
+            const b = encodeURIComponent(document.getElementById('team2').value);
+            send('/setteams?team1=' + a + '&team2=' + b, 'Set Teams', btn);
+        }
+
+        window.attemptedStart = false;
+        function startMatch(btn) {
+            window.attemptedStart = true;
+            setTimeout(() => { window.attemptedStart = false; }, 3000);
+            send('/command/s', 'Start / Resume', btn);
+        }
+
+        async function adjustTime(sign, btn) {
+            const input = document.getElementById('time');
+            const v = parseInt(input.value, 10);
+            if (!Number.isFinite(v) || v === 0) {
+                showToast('Enter a number of seconds first', false);
+                return;
+            }
+            const label = (sign > 0 ? 'Add ' : 'Subtract ') + Math.abs(v) + 's';
+            const ok = await send('/command/c?time=' + (v * sign), label, btn);
+            if (ok) input.value = '';
+        }
+
+        // ---------- Live status (pushed by the Pi) ----------
+        const conn    = document.getElementById('conn');
+        const labelEl = document.getElementById('status-label');
+        const timerEl = document.getElementById('timer-text');
+
+        const setText = (node, v) => { if (node.textContent !== v) node.textContent = v; };
+
+        function setConn(ok) {
+            conn.className = 'conn ' + (ok ? 'ok' : 'bad');
+            setText(conn, ok ? 'Connected' : 'Disconnected - reconnecting');
+        }
+
+        function render(data) {
+            if (data.timer_color === 'flash') {
+                setText(labelEl, "STARTING MATCH");
+                setText(timerEl, data.start_countdown > 0 ? String(data.start_countdown) : "3");
+            } else if (data.state === 1) {
+                setText(labelEl, "MATCH IN PROGRESS");
+                setText(timerEl, data.time_str);
+            } else if (data.state === 2) {
+                setText(labelEl, "MATCH PAUSED");
+                setText(timerEl, data.time_str);
+            } else if (data.state === 3) {
+                setText(labelEl, "MATCH COMPLETE");
+                setText(timerEl, data.time_str);
+            } else {
+                // Waiting state check
+                setText(labelEl, "WAITING FOR TEAMS");
+                if (window.attemptedStart && (!data.red_ready || !data.blue_ready)) {
+                    setText(timerEl, "WAITING FOR TEAMS TO READY UP");
+                } else {
+                    const readyStatus = [];
+                    if (data.red_ready)  readyStatus.push("Red Ready");
+                    if (data.blue_ready) readyStatus.push("Blue Ready");
+                    setText(timerEl, readyStatus.length > 0 ? readyStatus.join(" | ") : "READY");
+                }
+            }
+        }
+
+        let es = null, lastMsg = 0, retryTimer = null;
+
+        function scheduleReconnect() {
+            setConn(false);
+            if (retryTimer) return;
+            retryTimer = setTimeout(() => { retryTimer = null; connect(); }, 1000);
+        }
+
+        function connect() {
+            if (es) es.close();
+            lastMsg = Date.now();
+            es = new EventSource('/events');
+            es.onmessage = (e) => {
+                lastMsg = Date.now();
+                setConn(true);
+                try { render(JSON.parse(e.data)); } catch (err) {}
+            };
+            es.onerror = () => { es.close(); scheduleReconnect(); };
+        }
+
+        // The Pi sends a heartbeat every ~2s; if nothing arrives for 5s the
+        // link is treated as dead and the page reconnects.
+        setInterval(() => {
+            if (Date.now() - lastMsg > 5000) {
+                if (es) es.close();
+                scheduleReconnect();
+            }
+        }, 2000);
+
+        connect();
+    </script>
 </body>
 </html>

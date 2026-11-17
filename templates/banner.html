@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background: transparent;
+            color: white;
+            font-family: sans-serif;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Narrowed banner container centered at the top with a thin border */
+        .banner-bar {
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 700px; /* Fixed narrower width */
+            height: 60px;
+            background: rgba(15, 15, 15, 0.9);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+        }
+
+        #team1-name {
+            font-size: 26px;
+            color: white;
+            text-align: left;
+            transition: color 0.3s;
+            overflow-wrap: anywhere;
+        }
+        #team1-name.ready { color: red; }
+
+        #team2-name {
+            font-size: 26px;
+            color: white;
+            text-align: right;
+            transition: color 0.3s;
+            overflow-wrap: anywhere;
+        }
+        #team2-name.ready { color: blue; }
+
+        /* Centered compact timer display */
+        #timer {
+            font-size: 38px;
+            font-family: monospace;
+            color: white;
+            text-align: center;
+            padding: 0 16px;
+        }
+
+        /* Timer colors */
+        #timer.c-white   { color: white; }
+        #timer.c-red     { color: red; }
+        #timer.c-green   { color: white; }
+        #timer.c-blue    { color: blue; }
+        #timer.c-yellow  { color: gold; }
+        #timer.c-cyan    { color: cyan; }
+        #timer.c-magenta { color: magenta; }
+        #timer.c-flash   { animation: flash 1s steps(1, end) infinite; }
+
+        @keyframes flash {
+            0%   { color: red; }
+            50%  { color: blue; }
+            100% { color: red; }
+        }
+    </style>
+</head>
+<body>
+    <div class="banner-bar">
+        <!-- Team 1 on Left -->
+        <div id="team1-name"></div>
+
+        <!-- Timer in Center (Shows 3, 2, 1 during flash or match time) -->
+        <div id="timer" class="c-white">02:00</div>
+
+        <!-- Team 2 on Right -->
+        <div id="team2-name"></div>
+    </div>
+
+    <script>
+        const el = {
+            timer: document.getElementById('timer'),
+            t1:    document.getElementById('team1-name'),
+            t2:    document.getElementById('team2-name')
+        };
+
+        // Only touch the page when a value actually changed.
+        const setText  = (node, v) => { if (node.textContent !== v) node.textContent = v; };
+        const setClass = (node, v) => { if (node.className !== v) node.className = v; };
+
+        function render(d) {
+            setText(el.t1, d.teams_set ? d.team1 : '');
+            setText(el.t2, d.teams_set ? d.team2 : '');
+            setClass(el.t1, d.red_ready  ? 'ready' : '');
+            setClass(el.t2, d.blue_ready ? 'ready' : '');
+
+            if (d.timer_color === 'flash' && d.start_countdown > 0) {
+                setText(el.timer, String(d.start_countdown));
+            } else {
+                setText(el.timer, d.time_str);
+            }
+            setClass(el.timer, 'c-' + (d.timer_color || 'white'));
+        }
+
+        // Live updates pushed by the Pi (same stream as the overlay, so both
+        // update at the same moment). If the link drops or goes silent the page
+        // reconnects by itself (the Pi sends a heartbeat every ~2s).
+        let es = null, lastMsg = 0, retryTimer = null;
+
+        function scheduleReconnect() {
+            if (retryTimer) return;
+            retryTimer = setTimeout(() => { retryTimer = null; connect(); }, 1000);
+        }
+
+        function connect() {
+            if (es) es.close();
+            lastMsg = Date.now();
+            es = new EventSource('/events');
+            es.onmessage = (e) => {
+                lastMsg = Date.now();
+                try { render(JSON.parse(e.data)); } catch (err) {}
+            };
+            es.onerror = () => { es.close(); scheduleReconnect(); };
+        }
+
+        setInterval(() => {
+            if (Date.now() - lastMsg > 5000) {
+                if (es) es.close();
+                scheduleReconnect();
+            }
+        }, 2000);
+
+        connect();
+    </script>
+</body>
+</html>
