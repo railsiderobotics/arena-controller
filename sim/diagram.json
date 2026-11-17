@@ -1,0 +1,364 @@
+{
+  "version": 1,
+  "author": "railsiderobotics",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-arduino-mega",
+      "id": "mega",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led-ring",
+      "id": "strip",
+      "top": -420,
+      "left": 40,
+      "attrs": {
+        "pixels": "197"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "t1green",
+      "top": 340,
+      "left": -40,
+      "attrs": {
+        "color": "green",
+        "label": "Team 1 ready / unstick [1]",
+        "key": "1"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "t1red",
+      "top": 340,
+      "left": 110,
+      "attrs": {
+        "color": "red",
+        "label": "Team 1 tapout [Q]",
+        "key": "Q"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "t2green",
+      "top": 340,
+      "left": 260,
+      "attrs": {
+        "color": "green",
+        "label": "Team 2 ready / unstick [2]",
+        "key": "2"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "t2red",
+      "top": 340,
+      "left": 410,
+      "attrs": {
+        "color": "red",
+        "label": "Team 2 tapout [W]",
+        "key": "W"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "start",
+      "top": 450,
+      "left": -40,
+      "attrs": {
+        "color": "blue",
+        "label": "Controller start [S]",
+        "key": "S"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "pause",
+      "top": 450,
+      "left": 110,
+      "attrs": {
+        "color": "yellow",
+        "label": "Controller pause [P]",
+        "key": "P"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "stop",
+      "top": 450,
+      "left": 260,
+      "attrs": {
+        "color": "black",
+        "label": "Controller stop [X]",
+        "key": "X"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "reset",
+      "top": 450,
+      "left": 410,
+      "attrs": {
+        "color": "white",
+        "label": "Controller reset [R]",
+        "key": "R"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "snd3",
+      "top": -110,
+      "left": 420,
+      "attrs": {
+        "color": "orange",
+        "label": "Sound: team 1 ready"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "snd4",
+      "top": -110,
+      "left": 490,
+      "attrs": {
+        "color": "orange",
+        "label": "Sound: team 2 ready"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "snd5",
+      "top": -110,
+      "left": 560,
+      "attrs": {
+        "color": "orange",
+        "label": "Sound: FIGHT"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "snd6",
+      "top": -110,
+      "left": 630,
+      "attrs": {
+        "color": "orange",
+        "label": "Sound: 1 minute"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "snd7",
+      "top": -110,
+      "left": 700,
+      "attrs": {
+        "color": "orange",
+        "label": "Sound: 30 seconds"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "snd8",
+      "top": -110,
+      "left": 770,
+      "attrs": {
+        "color": "orange",
+        "label": "Sound: fight end"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "mega:9",
+      "strip:DIN",
+      "green",
+      []
+    ],
+    [
+      "mega:5V.1",
+      "strip:VCC",
+      "red",
+      []
+    ],
+    [
+      "mega:GND.1",
+      "strip:GND",
+      "black",
+      []
+    ],
+    [
+      "mega:22",
+      "t1green:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:23",
+      "t1green:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:26",
+      "t1red:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:27",
+      "t1red:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:24",
+      "t2green:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:25",
+      "t2green:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:28",
+      "t2red:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:29",
+      "t2red:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:33",
+      "start:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:GND.2",
+      "start:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:35",
+      "pause:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:GND.2",
+      "pause:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:37",
+      "stop:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:GND.2",
+      "stop:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:36",
+      "reset:1.l",
+      "blue",
+      []
+    ],
+    [
+      "mega:GND.2",
+      "reset:2.l",
+      "black",
+      []
+    ],
+    [
+      "mega:5V.2",
+      "snd3:A",
+      "red",
+      []
+    ],
+    [
+      "mega:3",
+      "snd3:C",
+      "orange",
+      []
+    ],
+    [
+      "mega:5V.2",
+      "snd4:A",
+      "red",
+      []
+    ],
+    [
+      "mega:4",
+      "snd4:C",
+      "orange",
+      []
+    ],
+    [
+      "mega:5V.2",
+      "snd5:A",
+      "red",
+      []
+    ],
+    [
+      "mega:5",
+      "snd5:C",
+      "orange",
+      []
+    ],
+    [
+      "mega:5V.2",
+      "snd6:A",
+      "red",
+      []
+    ],
+    [
+      "mega:6",
+      "snd6:C",
+      "orange",
+      []
+    ],
+    [
+      "mega:5V.2",
+      "snd7:A",
+      "red",
+      []
+    ],
+    [
+      "mega:7",
+      "snd7:C",
+      "orange",
+      []
+    ],
+    [
+      "mega:5V.2",
+      "snd8:A",
+      "red",
+      []
+    ],
+    [
+      "mega:8",
+      "snd8:C",
+      "orange",
+      []
+    ]
+  ],
+  "serialMonitor": {
+    "display": "always",
+    "newline": "lf"
+  },
+  "dependencies": {}
+}
